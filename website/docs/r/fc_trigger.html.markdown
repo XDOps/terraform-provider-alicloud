@@ -318,7 +318,7 @@ variable "name" {
 data "alicloud_account" "current" {
 }
 
-# Please make eventbridge available and then assume a specific service-linked role, which refers to https://registry.terraform.io/providers/aliyun/alicloud/latest/docs/resources/event_bridge_service_linked_role
+# Please make eventbridge available and then assume a specific service-linked role, which refers to https://registry.terraform.io/providers/xdops/alicloud/latest/docs/resources/event_bridge_service_linked_role
 resource "alicloud_event_bridge_service_linked_role" "service_linked_role" {
   product_name = "AliyunServiceRoleForEventBridgeSendToFC"
 }

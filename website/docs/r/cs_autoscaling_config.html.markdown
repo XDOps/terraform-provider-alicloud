@@ -16,7 +16,7 @@ This resource will help you configure auto scaling for the kubernetes cluster.
 -> **NOTE:** From version 1.164.0, support for selecting the policy for selecting which node pool to scale by parameter `expander`.
 
 ## Example Usage
-If you do not have an existing cluster, you need to create an ACK cluster through [alicloud_cs_managed_kubernetes](https://registry.terraform.io/providers/aliyun/alicloud/latest/docs/resources/cs_managed_kubernetes) first, and then configure automatic scaling.
+If you do not have an existing cluster, you need to create an ACK cluster through [alicloud_cs_managed_kubernetes](https://registry.terraform.io/providers/xdops/alicloud/latest/docs/resources/cs_managed_kubernetes) first, and then configure automatic scaling.
 
 ```terraform
 resource "alicloud_cs_autoscaling_config" "default" {

@@ -40,7 +40,7 @@ The following arguments are supported:
 Valid values: `Instance`, `Disk`, `VSwitch`, `Rds`, `KVStore`, `FunctionCompute`, `Elasticsearch`, `Slb`.
 
 -> **NOTE:** From version 1.134.0, the `available_resource_creation` value "Rds" has been deprecated. 
-If you want to fetch the available zones for RDS instance, you can use datasource [alicloud_db_zones](https://registry.terraform.io/providers/aliyun/alicloud/latest/docs/data-sources/db_zones) 
+If you want to fetch the available zones for RDS instance, you can use datasource [alicloud_db_zones](https://registry.terraform.io/providers/xdops/alicloud/latest/docs/data-sources/db_zones) 
 
 * `available_disk_category` - (Optional) Filter the results by a specific disk category. Can be either `cloud`, `cloud_efficiency`, `cloud_ssd`, `ephemeral_ssd`.
 * `multi` - (Optional, type: bool) Indicate whether the zones can be used in a multi AZ configuration. Default to `false`. Multi AZ is usually used to launch RDS instances.
