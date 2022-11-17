@@ -432,10 +432,10 @@ func resourceAlicloudBastionhostUserPublicKeyCreate(d *schema.ResourceData, meta
 
 	if v, ok := d.GetOk("public_keys"); ok {
 		if len(v.([]interface{})) > 0 {
-			public_keys := v.([]interface{})[0].(map[string]interface{})
-			request["PublicKey"] = base64.StdEncoding.EncodeToString([]byte(public_keys["public_key"].(string)))
-			request["Name"] = public_keys["public_key_name"]
-			request["Comment"] = public_keys["comment"]
+			publicKeys := v.([]interface{})[0].(map[string]interface{})
+			request["PublicKey"] = base64.StdEncoding.EncodeToString([]byte(publicKeys["public_key"].(string)))
+			request["Name"] = publicKeys["public_key_name"]
+			request["Comment"] = publicKeys["comment"]
 		}
 	}
 
@@ -476,11 +476,11 @@ func resourceAlicloudBastionhostUserPublicKeyRead(d *schema.ResourceData, meta i
 	if err != nil {
 		return WrapError(err)
 	}
-	var public_key = ""
+	var publicKey = ""
 	if v, ok := d.GetOk("public_keys"); ok {
 		if len(v.([]interface{})) > 0 {
 			keys := v.([]interface{})[0].(map[string]interface{})
-			public_key = keys["public_key"].(string)
+			publicKey = keys["public_key"].(string)
 		}
 	}
 
@@ -491,7 +491,7 @@ func resourceAlicloudBastionhostUserPublicKeyRead(d *schema.ResourceData, meta i
 			"public_key_id":   object["PublicKeyId"].(string),
 			"public_key_name": object["PublicKeyName"].(string),
 			"finger_print":    object["FingerPrint"].(string),
-			"public_key":      public_key,
+			"public_key":      publicKey,
 			"comment":         object["Comment"].(string),
 		}}
 
@@ -507,7 +507,7 @@ func resourceAlicloudBastionhostUserPublicKeyUpdate(d *schema.ResourceData, meta
 		return WrapError(err)
 	}
 	var response map[string]interface{}
-	var public_key = ""
+	var publicKey = ""
 	d.Partial(true)
 	update := false
 	request := map[string]interface{}{
@@ -519,13 +519,13 @@ func resourceAlicloudBastionhostUserPublicKeyUpdate(d *schema.ResourceData, meta
 			if len(v.([]interface{})) > 0 {
 				update = true
 
-				public_keys := v.([]interface{})[0].(map[string]interface{})
-				public_key = public_keys["public_key"].(string)
+				publicKeys := v.([]interface{})[0].(map[string]interface{})
+				publicKey = publicKeys["public_key"].(string)
 
-				request["PublicKeyId"] = public_keys["public_key_id"]
-				request["Comment"] = public_keys["comment"]
-				request["PublicKey"] = base64.StdEncoding.EncodeToString([]byte(public_key))
-				request["Name"] = public_keys["public_key_name"]
+				request["PublicKeyId"] = publicKeys["public_key_id"]
+				request["Comment"] = publicKeys["comment"]
+				request["PublicKey"] = base64.StdEncoding.EncodeToString([]byte(publicKey))
+				request["Name"] = publicKeys["public_key_name"]
 			}
 		}
 	}

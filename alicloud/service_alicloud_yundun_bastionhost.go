@@ -1297,6 +1297,60 @@ func (s *YundunBastionhostService) DescribeBastionhostHostAccountShareKeyAttachm
 	return
 }
 
+func (s *YundunBastionhostService) ListBastionhostHostNetworkDomains(id string) (object map[string]interface{}, err error) {
+	var response map[string]interface{}
+	conn, err := s.client.NewBastionhostClient()
+	if err != nil {
+		return nil, WrapError(err)
+	}
+	action := "ListNetworkDomains"
+	parts, err := ParseResourceId(id, 3)
+	if err != nil {
+		err = WrapError(err)
+		return
+	}
+	request := map[string]interface{}{
+		"InstanceId":        parts[0],
+		"NetworkDomainType": parts[1],
+		"PageSize":          PageSizeLarge,
+		"PageNumber":        1,
+	}
+	runtime := util.RuntimeOptions{}
+	runtime.SetAutoretry(true)
+	wait := incrementalWait(3*time.Second, 3*time.Second)
+	err = resource.Retry(5*time.Minute, func() *resource.RetryError {
+		response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, request, &runtime)
+		if err != nil {
+			if NeedRetry(err) {
+				wait()
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+		return nil
+	})
+	addDebug(action, response, request)
+	if err != nil {
+		if IsExpectedErrors(err, []string{"Commodity.BizError.InvalidStatus", "OBJECT_NOT_FOUND", "ListNetworkDomainsNotFound"}) {
+			return object, WrapErrorf(Error(GetNotFoundMessage("Bastionhost:ListNetworkDomains", id)), NotFoundMsg, ProviderERROR, fmt.Sprint(response["RequestId"]))
+		}
+		return object, WrapErrorf(err, DefaultErrorMsg, id, action, AlibabaCloudSdkGoERROR)
+	}
+	keys, err := jsonpath.Get("$.NetworkDomains", response)
+	if err != nil {
+		return object, WrapErrorf(err, FailedGetAttributeMsg, id, "$.NetworkDomains", response)
+	}
+
+	keyword := parts[2]
+	for _, v := range keys.([]interface{}) {
+		if find := strings.Contains(v.(map[string]interface{})["NetworkDomainName"].(string), keyword); find {
+			object = v.(map[string]interface{})
+		}
+	}
+
+	return object, nil
+}
+
 func (s *YundunBastionhostService) DescribeBastionhostAdAuthServer(id string) (object map[string]interface{}, err error) {
 	var response map[string]interface{}
 	conn, err := s.client.NewBastionhostClient()

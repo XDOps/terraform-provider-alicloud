@@ -2,6 +2,7 @@ package alicloud
 
 import (
 	"encoding/json"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -648,4 +649,31 @@ func CmsAlarmDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
 	sort.Strings(oldvlist)
 	return strings.Join(newvlist, " ") == strings.Join(oldvlist, " ")
 
+}
+
+func BastionhostNetworkDomainDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
+	var oldObjects []ProxyStruct
+	var newObjects []ProxyStruct
+
+	err := json.Unmarshal([]byte(old), &oldObjects)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	err = json.Unmarshal([]byte(new), &newObjects)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	log.Printf("=====================")
+
+	a, r, u := compareProxies(oldObjects, newObjects)
+	log.Printf("add: %v", a)
+	log.Printf("remove: %v", r)
+	log.Printf("update: %v", u)
+	if len(a) > 0 || len(r) > 0 || len(u) > 0 {
+		return false
+	}
+
+	return true
 }
