@@ -13,7 +13,7 @@ Provides a Bastion Host Host Account resource.
 
 For information about Bastion Host Host Account and how to use it, see [What is Host Account](https://www.alibabacloud.com/help/en/doc-detail/204377.htm).
 
--> **NOTE:** Available in v1.135.0+.
+-> **NOTE:** Available in v1.135.0+. Support `port` in v1.188.3+.
 
 ## Example Usage
 
@@ -25,6 +25,7 @@ resource "alicloud_bastionhost_host_account" "example" {
   host_id           = "15"
   instance_id       = "bastionhost-cn-tl32bh0no30"
   protocol_name     = "SSH"
+  port              = 2022
   password          = "YourPassword12345"
 }
 
@@ -41,6 +42,7 @@ The following arguments are supported:
 * `password` - (Optional, Sensitive) The password of the host account.
 * `private_key` - (Optional, Sensitive) The private key of the host account. The value is a Base64-encoded string. **NOTE:** It is valid when the attribute `protocol_name` is `SSH`
 * `protocol_name` - (Required, ForceNew) The protocol used by the host account. Valid values: SSH,RDP
+* `port` - (Optional) Specify the new hosting account's manage port.
 
 ## Attributes Reference
 

@@ -93,3 +93,45 @@ Bastion Host User can be imported using the id, e.g.
 ```
 $ terraform import alicloud_bastionhost_user.example <instance_id>:<user_id>
 ```
+
+PublicKey Usage
+
+```terraform
+resource "alicloud_bastionhost_user_public_key" "default" {
+  instance_id = "bastionhost-cn-xxxxxx"
+  user_id     = "7"
+  public_keys {
+    public_key_name = "zgb"
+    public_key      = "ssh-rsa xxxxxxxxxxxxxxxxx..."
+    comment         = "zgb's public key"
+  }
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `instance_id` - (Required, ForceNew) You Want to Query the User the Bastion Host ID of.
+* `user_id` - (Optional, ForceNew) Specify the New User ID.
+* `public_keys` - (Optional) Specify the New User public keys.
+  - `public_key_name`: (Optional) The name of public key.
+  - `public_key`: (Optional) You can import an existing public key and using Alicloud Bastionhost to manage it.
+  - `comment`: (Optional) The comment of the entry.
+
+## Argument Reference
+
+The following attributes are exported in addition to the arguments listed above:
+
+* `id` - The resource ID of Bastionhost Network Domain. The value formats as `<instance_id>:<user_id>:<public_key_id>`.
+* `public_keys` - Specify the New User public keys.
+  - `public_key_id` - The ID of public key.
+  - `finger_print` - The finger print of the key pair.
+
+## Import
+
+Bastion Host User can be imported using the id, e.g.
+
+```
+$ terraform import alicloud_bastionhost_user_public_key.example <instance_id>:<user_id>:<public_key_id>
+```

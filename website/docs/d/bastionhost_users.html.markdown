@@ -11,7 +11,7 @@ description: |-
 
 This data source provides the Bastionhost Users of the current Alibaba Cloud user.
 
--> **NOTE:** Available in v1.133.0+.
+-> **NOTE:** Available in v1.133.0+. Support `public_keys` in v1.188.3+.
 
 ## Example Usage
 
@@ -69,3 +69,48 @@ The following attributes are exported in addition to the arguments listed above:
 	* `status` - The status of the resource.
 	* `user_id` - The User ID.
 	* `user_name` - Specify the New User Name. This Parameter Is Only by Letters, Lowercase Letters, Numbers, and Underscores (_), Supports up to 128 Characters.
+
+
+PublicKey Usage
+
+```terraform
+data "alicloud_bastionhost_users" "default" {
+  instance_id = "bastionhost-cn-xxxxxxxx"
+}
+data "alicloud_bastionhost_user_public_keys" "default" {
+  instance_id = "bastionhost-cn-xxxxxxxx"
+  user_id 	  = data.alicloud_bastionhost_users.default.users.0.id
+}
+output "userkeys_1" {
+  value = data.alicloud_bastionhost_user_public_keys.default.public_keys
+}
+
+data "alicloud_bastionhost_user_public_keys" "nameRegex" {
+  instance_id 	 = "bastionhost-cn-xxxxxxxx"
+  user_id 		 = 6
+  key_name_regex = "^my-User"
+}
+output "userkeys_2" {
+  value = data.alicloud_bastionhost_user_public_keys.nameRegex.public_keys
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `instance_id` - (Required, ForceNew) You Want to Query the User the Bastion Host ID of.
+* `user_id` - (Optional, ForceNew) Specify the New User ID. 
+* `key_name_regex` - (Optional, ValidateFunc) A regex string to filter results by Key name.
+
+## Argument Reference
+
+The following attributes are exported in addition to the arguments listed above:
+
+* `key_ids` - (Optional， Computed) The list of public key ids.
+* `public_keys` - Specify the New User public keys.
+	- `public_key_id` - The ID of public key.
+	- `public_key_name` - The name of public key.
+	- `public_key` - You can import an existing public key and using Alicloud Bastionhost to manage it.
+	- `finger_print` - The finger print of the key pair.
+	- `comment` - The comment of the entry.

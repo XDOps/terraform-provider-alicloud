@@ -397,8 +397,9 @@ func resourceAlicloudBastionhostUserPublicKey() *schema.Resource {
 							Optional: true,
 						},
 						"public_key": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
 						},
 						"finger_print": {
 							Type:     schema.TypeString,

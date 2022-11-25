@@ -294,8 +294,8 @@ func dataSourceAlicloudBastionhostUserPublicKeys() *schema.Resource {
 			"key_ids": {
 				Type:     schema.TypeList,
 				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
 				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"public_keys": {
 				Type:     schema.TypeList,
