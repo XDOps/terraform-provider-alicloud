@@ -2,7 +2,9 @@ package alicloud
 
 import (
 	"fmt"
+	"github.com/PaesslerAG/jsonpath"
 	"log"
+	"strconv"
 	"time"
 
 	util "github.com/alibabacloud-go/tea-utils/service"
@@ -73,6 +75,10 @@ func resourceAlicloudBastionhostHostAccount() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validation.StringInSlice([]string{"RDP", "SSH"}, false),
 			},
+			"port": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -119,10 +125,41 @@ func resourceAlicloudBastionhostHostAccountCreate(d *schema.ResourceData, meta i
 
 	d.SetId(fmt.Sprint(request["InstanceId"], ":", response["HostAccountId"]))
 
+	if v, ok := d.GetOk("port"); ok && (v != 22 && v != 3389) {
+		req := map[string]interface{}{
+			"InstanceId":   request["InstanceId"],
+			"RegionId":     client.RegionId,
+			"HostIds":      fmt.Sprintf("[\"%v\"]", request["HostId"]),
+			"ProtocolName": request["ProtocolName"],
+			"Port":         fmt.Sprintf("%v", v),
+		}
+
+		action = "ModifyHostsPort"
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-12-09"), StringPointer("AK"), nil, req, &util.RuntimeOptions{})
+			if err != nil {
+				if NeedRetry(err) {
+					wait()
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		addDebug(action, response, req)
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_account", action, AlibabaCloudSdkGoERROR)
+		}
+	}
+
 	return resourceAlicloudBastionhostHostAccountRead(d, meta)
 }
 func resourceAlicloudBastionhostHostAccountRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*connectivity.AliyunClient)
+	conn, err := client.NewBastionhostClient()
+	if err != nil {
+		return WrapError(err)
+	}
 	yundunBastionhostService := YundunBastionhostService{client}
 	object, err := yundunBastionhostService.DescribeBastionhostHostAccount(d.Id())
 	if err != nil {
@@ -137,11 +174,51 @@ func resourceAlicloudBastionhostHostAccountRead(d *schema.ResourceData, meta int
 	if err != nil {
 		return WrapError(err)
 	}
+
+	port := 22
+	if object["ProtocolName"] == "RDP" {
+		port = 3389
+	}
+
+	if v, ok := d.GetOk("port"); ok {
+		port = v.(int)
+	} else {
+		var response map[string]interface{}
+		request := map[string]interface{}{
+			"InstanceId": parts[0],
+			"HostId":     object["HostId"],
+			"RegionId":   client.RegionId,
+		}
+
+		action := "GetHost"
+		response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-12-09"), StringPointer("AK"), nil, request, &util.RuntimeOptions{})
+		addDebug(action, response, request)
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_account", action, AlibabaCloudSdkGoERROR)
+		}
+		obj, e := jsonpath.Get("$.Host", response)
+		if e != nil {
+			return WrapErrorf(err, FailedGetAttributeMsg, d.Id(), "$.Host", response)
+		}
+		host := obj.(map[string]interface{})
+		for _, p := range host["Protocols"].([]interface{}) {
+			protocol := p.(map[string]interface{})
+			if protocol["ProtocolName"].(string) == object["ProtocolName"].(string) {
+				res, er := strconv.Atoi(fmt.Sprintf("%v", protocol["Port"]))
+				if er == nil {
+					port = res
+				}
+			}
+		}
+	}
+
 	d.Set("host_account_id", parts[1])
 	d.Set("instance_id", parts[0])
 	d.Set("host_account_name", object["HostAccountName"])
 	d.Set("host_id", object["HostId"])
 	d.Set("protocol_name", object["ProtocolName"])
+	d.Set("port", port)
+
 	return nil
 }
 func resourceAlicloudBastionhostHostAccountUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -156,6 +233,35 @@ func resourceAlicloudBastionhostHostAccountUpdate(d *schema.ResourceData, meta i
 		return WrapError(err)
 	}
 	update := false
+
+	if d.HasChange("port") {
+		request := map[string]interface{}{
+			"InstanceId":   parts[0],
+			"HostIds":      fmt.Sprintf("[\"%v\"]", d.Get("host_id")),
+			"ProtocolName": d.Get("protocol_name"),
+			"Port":         fmt.Sprintf("%v", d.Get("port")),
+			"RegionId":     client.RegionId,
+		}
+
+		action := "ModifyHostsPort"
+		wait := incrementalWait(3*time.Second, 3*time.Second)
+		err = resource.Retry(d.Timeout(schema.TimeoutUpdate), func() *resource.RetryError {
+			response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-12-09"), StringPointer("AK"), nil, request, &util.RuntimeOptions{})
+			if err != nil {
+				if NeedRetry(err) {
+					wait()
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		addDebug(action, response, request)
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, d.Id(), action, AlibabaCloudSdkGoERROR)
+		}
+	}
+
 	request := map[string]interface{}{
 		"HostAccountId": parts[1],
 		"InstanceId":    parts[0],

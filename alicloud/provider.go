@@ -1164,6 +1164,7 @@ func Provider() terraform.ResourceProvider {
 			"alicloud_bastionhost_user":                                     resourceAlicloudBastionhostUser(),
 			"alicloud_bastionhost_user_public_key":                          resourceAlicloudBastionhostUserPublicKey(),
 			"alicloud_bastionhost_host_network_domain":                      resourceAlicloudBastionhostHostNetworkDomain(),
+			"alicloud_bastionhost_host_network_domain_import":               resourceAlicloudBastionhostHostNetworkDomainImport(),
 			"alicloud_dfs_access_group":                                     resourceAlicloudDfsAccessGroup(),
 			"alicloud_ehpc_job_template":                                    resourceAlicloudEhpcJobTemplate(),
 			"alicloud_sddp_config":                                          resourceAlicloudSddpConfig(),

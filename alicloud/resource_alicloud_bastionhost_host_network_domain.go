@@ -55,6 +55,46 @@ func resourceAlicloudBastionhostHostNetworkDomain() *schema.Resource {
 	}
 }
 
+func resourceAlicloudBastionhostHostNetworkDomainImport() *schema.Resource {
+	return &schema.Resource{
+		Create: resourceAlicloudBastionhostHostNetworkDomainImportCreate,
+		Read:   resourceAlicloudBastionhostHostNetworkDomainImportRead,
+		Update: resourceAlicloudBastionhostHostNetworkDomainImportUpdate,
+		Delete: resourceAlicloudBastionhostHostNetworkDomainImportDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+		Schema: map[string]*schema.Schema{
+			"instance_id": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"network_domain_id": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"host_ids": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:         true,
+				Optional:         true,
+				DiffSuppressFunc: BastionhostNetworkDomainIdsDiffSuppressFunc,
+			},
+			"database_ids": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:         true,
+				Optional:         true,
+				DiffSuppressFunc: BastionhostNetworkDomainIdsDiffSuppressFunc,
+			},
+		},
+	}
+}
+
 func resourceAlicloudBastionhostHostNetworkDomainCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*connectivity.AliyunClient)
 	var response map[string]interface{}
@@ -169,8 +209,6 @@ func resourceAlicloudBastionhostHostNetworkDomainRead(d *schema.ResourceData, me
 		"InstanceId":      parts[0],
 		"NetworkDomainId": parts[1],
 	}
-
-	log.Printf("-- %v --", request)
 
 	wait := incrementalWait(3*time.Second, 3*time.Second)
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
@@ -299,7 +337,7 @@ func resourceAlicloudBastionhostHostNetworkDomainUpdate(d *schema.ResourceData, 
 
 				action := "DeleteNetworkDomainProxy"
 				response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, removeRequest, &util.RuntimeOptions{})
-				addDebug(action, response, request)
+				addDebug(action, response, removeRequest)
 				if err != nil {
 					return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_network_domain", action, AlibabaCloudSdkGoERROR)
 				}
@@ -359,7 +397,7 @@ func resourceAlicloudBastionhostHostNetworkDomainUpdate(d *schema.ResourceData, 
 
 				action := "CreateNetworkDomainProxy"
 				response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, addRequest, &util.RuntimeOptions{})
-				addDebug(action, response, request)
+				addDebug(action, response, addRequest)
 				if err != nil {
 					return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_network_domain", action, AlibabaCloudSdkGoERROR)
 				}
@@ -413,7 +451,7 @@ func resourceAlicloudBastionhostHostNetworkDomainUpdate(d *schema.ResourceData, 
 
 				action := "ModifyNetworkDomainProxy"
 				response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, updateRequest, &util.RuntimeOptions{})
-				addDebug(action, response, request)
+				addDebug(action, response, updateRequest)
 				if err != nil {
 					return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_network_domain", action, AlibabaCloudSdkGoERROR)
 				}
@@ -493,5 +531,285 @@ func resourceAlicloudBastionhostHostNetworkDomainDelete(d *schema.ResourceData, 
 		}
 		return WrapErrorf(err, DefaultErrorMsg, d.Id(), action, AlibabaCloudSdkGoERROR)
 	}
+	return nil
+}
+
+func resourceAlicloudBastionhostHostNetworkDomainImportCreate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*connectivity.AliyunClient)
+	yundunBastionhostService := YundunBastionhostService{client}
+
+	var err error
+	var hostIds []interface{}
+	var databaseIds []interface{}
+	actions := make([]map[string]interface{}, 0)
+
+	instanceId := d.Get("instance_id").(string)
+	networkDomainId := d.Get("network_domain_id").(string)
+	if v, ok := d.GetOk("host_ids"); ok {
+		hostIds = v.([]interface{})
+		if len(hostIds) > 0 {
+			item := map[string]interface{}{
+				"action": "MoveHostsToNetworkDomain",
+				"ids":    hostIds,
+			}
+			actions = append(actions, item)
+		}
+	}
+	if v, ok := d.GetOk("database_ids"); ok {
+		databaseIds = v.([]interface{})
+		if len(databaseIds) > 0 {
+			item := map[string]interface{}{
+				"action": "MoveDatabasesToNetworkDomain",
+				"ids":    databaseIds,
+			}
+			actions = append(actions, item)
+		}
+	}
+
+	for i := 0; i < len(actions); i++ {
+		action := actions[i]["action"].(string)
+		ids := actions[i]["ids"].([]interface{})
+
+		wait := incrementalWait(3*time.Second, 3*time.Second)
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			_, err = yundunBastionhostService.UpdateBastionhostHostNetworkDomainImports(action, instanceId, networkDomainId, ids)
+			if err != nil {
+				if NeedRetry(err) {
+					wait()
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host_network_domain", actions[i], AlibabaCloudSdkGoERROR)
+		}
+	}
+
+	d.SetId(fmt.Sprint(instanceId, ":", networkDomainId))
+
+	return nil
+}
+
+func resourceAlicloudBastionhostHostNetworkDomainImportRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*connectivity.AliyunClient)
+	yundunBastionhostService := YundunBastionhostService{client}
+	actions := []string{"ListHosts", "ListDatabases"}
+	keys := []string{"$.Hosts", "$.Databases"}
+
+	parts, err := ParseResourceId(d.Id(), 2)
+	if err != nil {
+		return WrapError(err)
+	}
+
+	hostIds := make([]string, 0)
+	databaseIds := make([]string, 0)
+	for i := 0; i < len(actions); i++ {
+		object, err := yundunBastionhostService.ListBastionhostHostNetworkDomainImports(d.Id(), actions[i], keys[i])
+		if err != nil {
+			if NotFoundError(err) {
+				log.Printf("[DEBUG] Resource alicloud_bastionhost_host_network_domain yundunBastionhostService.ListBastionhostHostNetworkDomainImports Failed!!! %s", err)
+				d.SetId("")
+				return nil
+			}
+			return WrapError(err)
+		}
+
+		for _, obj := range object {
+			if actions[i] == "ListHosts" {
+				hostIds = append(hostIds, fmt.Sprint(obj["HostId"]))
+			}
+
+			if actions[i] == "ListDatabases" {
+				databaseIds = append(databaseIds, fmt.Sprint(obj["DatabaseId"]))
+			}
+		}
+	}
+
+	if err := d.Set("instance_id", parts[0]); err != nil {
+		return WrapError(err)
+	}
+
+	if err := d.Set("network_domain_id", parts[1]); err != nil {
+		return WrapError(err)
+	}
+
+	if err := d.Set("host_ids", hostIds); err != nil {
+		return WrapError(err)
+	}
+
+	if err := d.Set("database_ids", databaseIds); err != nil {
+		return WrapError(err)
+	}
+
+	return nil
+}
+
+func resourceAlicloudBastionhostHostNetworkDomainImportUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*connectivity.AliyunClient)
+	yundunBastionhostService := YundunBastionhostService{client}
+
+	var data []interface{}
+	request := make(map[string]interface{})
+
+	instanceId := d.Get("instance_id").(string)
+	networkDomainId := d.Get("network_domain_id").(string)
+
+	if d.HasChanges("host_ids", "database_ids") {
+		oh, nh := d.GetChange("host_ids")
+		od, nd := d.GetChange("database_ids")
+
+		oHosts := oh.([]interface{})
+		nHosts := nh.([]interface{})
+		oDatabases := od.([]interface{})
+		nDatabases := nd.([]interface{})
+
+		addHosts, rmHosts := ArrayDifference(oHosts, nHosts)
+		addDatabases, rmDatabases := ArrayDifference(oDatabases, nDatabases)
+
+		if len(addHosts) > 0 || len(addDatabases) > 0 {
+			actions := make([]map[string]interface{}, 0)
+			hostIds := addHosts
+			if len(hostIds) > 0 {
+				item := map[string]interface{}{
+					"action": "MoveHostsToNetworkDomain",
+					"ids":    hostIds,
+				}
+				actions = append(actions, item)
+			}
+			databaseIds := addDatabases
+			if len(databaseIds) > 0 {
+				item := map[string]interface{}{
+					"action": "MoveDatabasesToNetworkDomain",
+					"ids":    databaseIds,
+				}
+				actions = append(actions, item)
+			}
+
+			for i := 0; i < len(actions); i++ {
+				action := actions[i]["action"].(string)
+				ids := actions[i]["ids"].([]interface{})
+
+				wait := incrementalWait(3*time.Second, 3*time.Second)
+				err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+					_, err := yundunBastionhostService.UpdateBastionhostHostNetworkDomainImports(action, instanceId, networkDomainId, ids)
+					if err != nil {
+						if NeedRetry(err) {
+							wait()
+							return resource.RetryableError(err)
+						}
+						return resource.NonRetryableError(err)
+					}
+					return nil
+				})
+				addDebug(actions[i], data, request)
+				if err != nil {
+					return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host", actions[i], AlibabaCloudSdkGoERROR)
+				}
+			}
+		}
+
+		if len(rmHosts) > 0 || len(rmDatabases) > 0 {
+			actions := make([]map[string]interface{}, 0)
+			hostIds := rmHosts
+			if len(hostIds) > 0 {
+				item := map[string]interface{}{
+					"action": "MoveHostsToNetworkDomain",
+					"ids":    hostIds,
+				}
+				actions = append(actions, item)
+			}
+			databaseIds := rmDatabases
+			if len(databaseIds) > 0 {
+				item := map[string]interface{}{
+					"action": "MoveDatabasesToNetworkDomain",
+					"ids":    databaseIds,
+				}
+				actions = append(actions, item)
+			}
+
+			for i := 0; i < len(actions); i++ {
+				networkDomainId = "1"
+				action := actions[i]["action"].(string)
+				ids := actions[i]["ids"].([]interface{})
+
+				wait := incrementalWait(3*time.Second, 3*time.Second)
+				err := resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+					_, err := yundunBastionhostService.UpdateBastionhostHostNetworkDomainImports(action, instanceId, networkDomainId, ids)
+					if err != nil {
+						if NeedRetry(err) {
+							wait()
+							return resource.RetryableError(err)
+						}
+						return resource.NonRetryableError(err)
+					}
+					return nil
+				})
+				addDebug(actions[i], data, request)
+				if err != nil {
+					return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host", actions[i], AlibabaCloudSdkGoERROR)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func resourceAlicloudBastionhostHostNetworkDomainImportDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*connectivity.AliyunClient)
+	yundunBastionhostService := YundunBastionhostService{client}
+
+	parts, err := ParseResourceId(d.Id(), 2)
+	if err != nil {
+		return WrapError(err)
+	}
+
+	var data []interface{}
+	request := make(map[string]interface{})
+	actions := make([]map[string]interface{}, 0)
+	instanceId := parts[0]
+	networkDomainId := "1"
+
+	hostIds, _ := d.GetChange("host_ids")
+	if len(hostIds.([]interface{})) > 0 {
+		item := map[string]interface{}{
+			"action": "MoveHostsToNetworkDomain",
+			"ids":    hostIds,
+		}
+		actions = append(actions, item)
+	}
+	databaseIds, _ := d.GetChange("database_ids")
+	if len(databaseIds.([]interface{})) > 0 {
+		item := map[string]interface{}{
+			"action": "MoveDatabasesToNetworkDomain",
+			"ids":    databaseIds,
+		}
+		actions = append(actions, item)
+	}
+
+	for i := 0; i < len(actions); i++ {
+		action := actions[i]["action"].(string)
+		ids := actions[i]["ids"].([]interface{})
+
+		wait := incrementalWait(3*time.Second, 3*time.Second)
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			_, err = yundunBastionhostService.UpdateBastionhostHostNetworkDomainImports(action, instanceId, networkDomainId, ids)
+			if err != nil {
+				if NeedRetry(err) {
+					wait()
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		addDebug(actions[i], data, request)
+		if err != nil {
+			return WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host", actions[i], AlibabaCloudSdkGoERROR)
+		}
+	}
+
 	return nil
 }

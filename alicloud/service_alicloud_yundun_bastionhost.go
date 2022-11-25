@@ -1,6 +1,7 @@
 package alicloud
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -1347,6 +1348,110 @@ func (s *YundunBastionhostService) ListBastionhostHostNetworkDomains(id string) 
 			object = v.(map[string]interface{})
 		}
 	}
+
+	return object, nil
+}
+
+func (s *YundunBastionhostService) ListBastionhostHostNetworkDomainImports(id string, action string, key string) (object []map[string]interface{}, err error) {
+	var response map[string]interface{}
+	conn, err := s.client.NewBastionhostClient()
+	if err != nil {
+		return nil, WrapError(err)
+	}
+	parts, err := ParseResourceId(id, 2)
+	if err != nil {
+		err = WrapError(err)
+		return
+	}
+
+	request := map[string]interface{}{
+		"InstanceId":      parts[0],
+		"NetworkDomainId": parts[1],
+		"Keyword":         "",
+		"PageSize":        PageSizeLarge,
+		"PageNumber":      1,
+	}
+
+	for {
+		runtime := util.RuntimeOptions{}
+		runtime.SetAutoretry(true)
+		wait := incrementalWait(3*time.Second, 3*time.Second)
+		err = resource.Retry(5*time.Minute, func() *resource.RetryError {
+			response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, request, &runtime)
+			if err != nil {
+				if NeedRetry(err) {
+					wait()
+					return resource.RetryableError(err)
+				}
+				return resource.NonRetryableError(err)
+			}
+			return nil
+		})
+		addDebug(action, response, request)
+		if err != nil {
+			return nil, WrapErrorf(err, DataDefaultErrorMsg, "alicloud_bastionhost_hosts", action, AlibabaCloudSdkGoERROR)
+		}
+		resp, err := jsonpath.Get(key, response)
+		if err != nil {
+			return nil, WrapErrorf(err, FailedGetAttributeMsg, action, key, response)
+		}
+		result, _ := resp.([]interface{})
+		for _, v := range result {
+			item := v.(map[string]interface{})
+			object = append(object, item)
+		}
+		if len(result) < PageSizeLarge {
+			break
+		}
+		request["PageNumber"] = request["PageNumber"].(int) + 1
+	}
+
+	return object, nil
+}
+
+func (s *YundunBastionhostService) UpdateBastionhostHostNetworkDomainImports(action string, instanceId string, networkDomainId string, ids []interface{}) (object []interface{}, err error) {
+	var response map[string]interface{}
+	conn, err := s.client.NewBastionhostClient()
+	if err != nil {
+		return nil, WrapError(err)
+	}
+
+	request := map[string]interface{}{
+		"InstanceId":      instanceId,
+		"NetworkDomainId": networkDomainId,
+	}
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	if action == "MoveHostsToNetworkDomain" {
+		b, e := json.Marshal(ids)
+		if e == nil {
+			request["HostIds"] = string(b)
+		}
+	} else if action == "MoveDatabasesToNetworkDomain" {
+		b, e := json.Marshal(ids)
+		if e == nil {
+			request["DatabaseIds"] = string(b)
+		}
+	}
+
+	response, err = conn.DoRequest(StringPointer(action), nil, StringPointer("POST"), StringPointer("2019-11-30"), StringPointer("AK"), nil, request, &util.RuntimeOptions{})
+	if err != nil {
+		return nil, err
+	}
+	addDebug(action, response, request)
+	if err != nil {
+		return nil, WrapErrorf(err, DefaultErrorMsg, "alicloud_bastionhost_host", action, AlibabaCloudSdkGoERROR)
+	}
+
+	result, err := jsonpath.Get("$.Results", response)
+	if err != nil {
+		return nil, WrapErrorf(err, FailedGetAttributeMsg, instanceId, "$.Results", response)
+	}
+
+	object = result.([]interface{})
 
 	return object, nil
 }

@@ -1437,3 +1437,43 @@ func IsSubCollection(sub []string, full []string) bool {
 	}
 	return true
 }
+
+// ArrayDifference Return added & removed array object
+func ArrayDifference(src []interface{}, dest []interface{}) ([]interface{}, []interface{}) {
+	msrc := make(map[string]byte)
+	mall := make(map[string]byte)
+	var set []string
+
+	for _, v := range src {
+		s := fmt.Sprintf("%v", v)
+		msrc[s] = 0
+		mall[s] = 0
+	}
+
+	for _, v := range dest {
+		l := len(mall)
+		s := fmt.Sprintf("%v", v)
+		mall[s] = 1
+		if l != len(mall) {
+			l = len(mall)
+		} else {
+			set = append(set, s)
+		}
+	}
+
+	for _, v := range set {
+		delete(mall, v)
+	}
+
+	var added, deleted []interface{}
+	for v, _ := range mall {
+		s := fmt.Sprintf("%v", v)
+		_, exist := msrc[s]
+		if exist {
+			deleted = append(deleted, s)
+		} else {
+			added = append(added, s)
+		}
+	}
+	return added, deleted
+}

@@ -665,14 +665,35 @@ func BastionhostNetworkDomainDiffSuppressFunc(k, old, new string, d *schema.Reso
 		log.Printf("%v", err)
 	}
 
-	log.Printf("=====================")
-
 	a, r, u := compareProxies(oldObjects, newObjects)
-	log.Printf("add: %v", a)
-	log.Printf("remove: %v", r)
-	log.Printf("update: %v", u)
 	if len(a) > 0 || len(r) > 0 || len(u) > 0 {
 		return false
+	}
+
+	return true
+}
+
+func BastionhostNetworkDomainIdsDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
+	if d.HasChange(k) {
+		if strings.Contains(k, "host_ids") {
+			oh, nh := d.GetChange("host_ids")
+			oHosts := oh.([]interface{})
+			nHosts := nh.([]interface{})
+			addHosts, rmHosts := ArrayDifference(oHosts, nHosts)
+
+			if len(addHosts) > 0 || len(rmHosts) > 0 {
+				return false
+			}
+		} else if strings.Contains(k, "database_ids") {
+			od, nd := d.GetChange("database_ids")
+			oDatabases := od.([]interface{})
+			nDatabases := nd.([]interface{})
+			addDatabases, rmDatabases := ArrayDifference(oDatabases, nDatabases)
+
+			if len(addDatabases) > 0 || len(rmDatabases) > 0 {
+				return false
+			}
+		}
 	}
 
 	return true
