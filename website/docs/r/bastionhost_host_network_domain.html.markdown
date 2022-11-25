@@ -58,7 +58,7 @@ The following attributes are exported:
 
 ## Import
 
-Bastion Host User can be imported using the id, e.g.
+Bastion Host Network Domain can be imported using the id, e.g.
 
 ```
 $ terraform import alicloud_bastionhost_host_network_domain.example <instance_id>:<network_domain_id>

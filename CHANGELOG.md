@@ -1,4 +1,16 @@
-## 1.188.1 (Unreleased)
+## 1.188.3 (November 25, 2022)
+- **New Resource:** alicloud_bastionhost_host_network_domain 堡垒机网络域管理
+- **New Resource:** alicloud_bastionhost_host_network_domain_import 堡垒机网络域主机、数据库导入/导出管理
+- **New Data Source:** alicloud_bastionhost_host_network_domains 堡垒机网络域数据
+
+ENHANCEMENTS:
+
+- resource/alicloud_bastionhost_host_account: Adds new attribute port
+
+## 1.188.2 (October 21, 2022)
+- **FIXES:** change aliyun/alicloud to xdops/alicloud
+
+## 1.188.1 (October 21, 2022)
 - **New Resource:** alicloud_bastionhost_user_public_key 堡垒机用户公钥管理
 - **New Data Source:** alicloud_bastionhost_user_public_keys 堡垒机用户公钥数据
 
